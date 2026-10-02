@@ -15,6 +15,7 @@
 **Tema:** *"Ignite Innovation, Build the Future"*
 
 [Fitur Utama](#-fitur-utama-wellum) •
+[Screenshots](#-galeri-antarmuka--screenshots) •
 [Arsitektur Machine Learning](#-arsitektur-machine-learning-sota) •
 [Instalasi & Panduan Cepat](#-panduan-instalasi--menjalankan) •
 [Matriks Intervensi](#-matriks-intervensi-preskriptif-institusional) •
@@ -78,6 +79,40 @@ Sistem Wellum dirancang mengikuti standar **Apple Human Interface Guidelines (HI
 
 ---
 
+## 📸 Galeri Antarmuka & Screenshots
+
+Berikut adalah dokumentasi visual antarmuka sistem **Wellum** berbasis standar desain Apple (*Apple Human Interface Guidelines*) dan aplikasi companion Streamlit:
+
+### 1. Ingesti Data Survei & Landing Page (Apple Minimalist Upload Zone)
+> Antarmuka pendaratan modern dengan *drag-and-drop zone*, validasi format kolom survei instan, serta integrasi tombol demo untuk pengujian langsung.
+![Landing Page & CSV Upload Zone](Screenshots/01_landing_upload.png)
+
+### 2. Executive Campus Analytics Dashboard (KPI Cards & Wellbeing Breakdown)
+> Ringkasan eksekutif untuk pimpinan kampus: 4 kartu metrik utama, indikator persentase mahasiswa zona kritis, dan distribusi kelas kesejahteraan (`Low`, `Medium`, `High`).
+![Executive Campus Analytics Dashboard](Screenshots/02_executive_dashboard_kpi.png)
+
+### 3. Radar Risiko Multi-Dimensi & Analisis Komparatif Antarfakultas
+> Visualisasi radar 6 pilar risiko kesehatan digital mahasiswa (Tidur, Distraksi, Stres Ujian, Prokrastinasi, Beban Fisik, Akademik) berdampingan dengan perbandingan antarbidang studi.
+![Multi-Dimensional Risk Radar & Comparative Analytics](Screenshots/03_risk_radar_analytics.png)
+
+### 4. Student Roster Table (Search, Filter, & Live Status)
+> Tabel daftar seluruh responden mahasiswa dengan pencarian instan, filter status risiko, visualisasi bar durasi tidur, IPK, dan indikator stres.
+![Student Roster & Cohort Table](Screenshots/04_student_roster_table.png)
+
+### 5. Detail Profil Mahasiswa & Rekomendasi Preskriptif 3 Tingkat
+> Modal personal responden menampilkan kartu diagnosa perilaku, radar risiko spesifik mahasiswa, serta matriks tindakan preskriptif berjenjang (Primer, Sekunder, Tersier).
+![Student Detail Modal & Prescriptive Recommendations](Screenshots/05_student_detail_modal.png)
+
+### 6. Fitur Edit Mandiri Mahasiswa (JSON-Backed Live Inference)
+> Form penyuntingan data profil mahasiswa dengan penyimpanan persisten otomatis ke berkas JSON sesi dan penghitungan ulang prediksi secara *real-time*.
+![Student Edit Modal & Real-Time Parameter Override](Screenshots/06_student_edit_modal.png)
+
+### 7. Companion Streamlit Explorer (What-If Interactive Simulator)
+> Antarmuka alternatif Streamlit untuk simulasi eksperimen profil tunggal (*what-if analysis*) dan galeri Explainable AI (XAI).
+![Streamlit Companion Exploration Dashboard](Screenshots/07_streamlit_companion.png)
+
+---
+
 ## 🔬 Arsitektur Machine Learning (SOTA)
 
 Sistem Wellum dibangun di atas metodologi pemodelan yang mengoptimalkan metrik **Macro F1-Score** pada data yang memiliki ketimpangan kelas alami (*Low* 48.8%, *Medium* 35.8%, *High* 15.4%):
@@ -109,6 +144,16 @@ TECHPO/
 │       ├── dashboard.html              # Executive campus analytics, chart visual, KPI cards
 │       └── students.html               # Student roster table, live JSON editing, detail modal
 │
+├── Screenshots/                        # Dokumentasi Tangkapan Layar Resmi Antarmuka Sistem
+│   ├── 01_landing_upload.png           # Halaman Upload Drag-and-Drop (Apple HIG Minimalist)
+│   ├── 02_executive_dashboard_kpi.png  # Executive KPI Cards & Distribusi Kesejahteraan
+│   ├── 03_risk_radar_analytics.png     # Radar Risiko 6 Dimensi & Analisis Fakultas
+│   ├── 04_student_roster_table.png     # Tabel Roster Mahasiswa & Filter Interaktif
+│   ├── 05_student_detail_modal.png     # Modal Detail Mahasiswa & Rekomendasi Preskriptif
+│   ├── 06_student_edit_modal.png       # Modal Edit Mandiri Data 
+│
+ Dashboard (Streamlit)
+│
 ├── figures/                            # 12 Visualisasi Publikasi Resmi (High-Res 300 DPI)
 │   ├── vis_01_target_donut.png         # VIS-01: Distribusi Prior Target
 │   ├── vis_02_correlation_heatmap.png  # VIS-02: Spearman Correlation Matrix
@@ -131,13 +176,7 @@ TECHPO/
 ├── eduwell_engine.py                   # Legacy alias module untuk kompatibilitas penuh
 ├── app.py                              # Streamlit Companion Exploration Dashboard
 ├── train_and_save_model.py             # Script otomatis retraining & bundle packager produksi
-├── generate_visualizations.py          # Script pembangkit otomatis 12 gambar resolusi tinggi
 ├── experiment_v6_sota_multiseed_champion.ipynb # Notebook riset utama (SOTA Champion)
-├── notebook_visualisasi_lengkap.ipynb  # Notebook visualisasi dan analisis eksplorasi
-├── TECHNICAL_REPORT_TECHPHORIA_2026.md # Technical report lengkap standar akademik
-├── BLUEPRINT_DAN_RANCANGAN_LENGKAP.md  # Master blueprint & rincian metodologi sistem
-├── train.csv                           # Dataset pelatihan kompetisi (bersih & berlabel)
-├── test.csv                            # Dataset pengujian kompetisi (tanpa label)
 ├── submission_v6_sota_multiseed.csv    # Berkas hasil inferensi terbaik
 ├── requirements.txt                    # Daftar pustaka & dependensi Python
 ├── .gitignore                          # Konfigurasi filter berkas Git & GitHub
@@ -221,11 +260,7 @@ Akses pada peramban melalui URL:
 
 ## 📊 Katalog Visualisasi Resmi (300 DPI)
 
-Seluruh visualisasi teknis berstandar publikasi akademik telah dibangkitkan dan tersimpan di folder `figures/`. Anda dapat membangkitkan ulang seluruh figur menggunakan perintah:
-
-```bash
-python generate_visualizations.py
-```
+Seluruh visualisasi teknis berstandar publikasi akademik telah dibangkitkan dengan resolusi tinggi (300 DPI) dan tersimpan di folder `figures/`:
 
 | ID Gambar | Nama Berkas | Deskripsi Visual |
 | :---: | :--- | :--- |
