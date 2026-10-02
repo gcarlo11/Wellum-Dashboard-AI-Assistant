@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+{% block title %}Student List{% endblock %}
+
+{% block nav_links %}
+<li><a href="{{ url_for('dashboard', session_id=session.session_id) }}">Dashboard</a></li>
+<li><a href="{{ url_for('students_list', session_id=session.session_id) }}" class="active">Students</a></li>
+{% endblock %}
+
+{% block subnav %}
+<div class="sub-nav">
+  <div class="sub-nav__title">Student Records</div>
+  <div class="sub-nav__actions">
+    <span class="t-caption text-muted">{{ session.filename }}</span>
+    <a href="{{ url_for('dashboard', session_id=session.session_id) }}" class="btn btn-secondary btn-sm">Back to Dashboard</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-content">
+
+  <!-- ── Table with Controls ───────────────────────────────────────────── -->
+  <div class="data-table-container">
+    <div class="data-table-header">
+      <div class="data-table-header__title">
+        All Students
+        <span class="t-caption text-muted" id="result-count" style="margin-left: 8px;"></span>
+      </div>
+      <div class="data-table-header__controls">
+        <input type="text" class="input input--search" id="search-input"
+               placeholder="Search by ID, field, gender..." style="width: 260px; height: 36px; font-size: 14px;" />
+        <select class="select" id="filter-label">
+          <option value="">All Labels</option>
+          <option value="Low">Low</option>
+          <option value="Medium">Medium</option>
+          <option value="High">High</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="overflow-x: auto;">
+      <table class="data-table" id="students-table">
+        <thead>
+          <tr>
+            <th>Respondent ID</th>
+            <th>Age</th>
+            <th>Gender</th>
+            <th>Field of Study</th>
+            <th>GPA</th>
+            <th>Sleep (hrs)</th>
+            <th>Stress</th>
+            <th>Anxiety</th>
+            <th>Attendance</th>
+            <th>Screen (hrs)</th>
+            <th>Fused Score</th>
+            <th>Label</th>
+            <th style="width: 90px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="students-tbody">
+          <tr><td colspan="13" class="text-center text-muted" style="padding:40px;">Loading students...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<!-- ── Student Detail / Edit Modal ──────────────────────────────────────── -->
+<div class="modal-overlay" id="student-modal">
+  <div class="modal" style="max-width: 680px;">
+    <div class="modal__header">
+      <div class="modal__title" id="modal-title">Student Detail</div>
+      <button class="modal__close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal__body" id="modal-body">
+      <!-- Dynamically filled -->
+    </div>
+    <div class="modal__footer" id="modal-footer">
+      <button class="btn btn-pearl btn-sm" onclick="closeModal()">Close</button>
+      <button class="btn btn-primary btn-sm" id="modal-save" onclick="saveStudent()" style="display:none;">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const SESSION_ID = '{{ session.session_id }}';
+  const PAGE_SIZE = 25;
+  let allStudents = [];
+  let filteredStudents = [];
+  let currentPage = 1;
+  let editingStudent = null;
+
+  // ── Fetch Students ─────────────────────────────────────────────────────
+  function fetchStudents() {
+    const label = document.getElementById('filter-label').value;
+    const search = document.getElementById('search-input').value;
+    const params = new URLSearchParams();
+    if (label) params.set('label', label);
+    if (search) params.set('search', search);
+
+    fetch(`/api/students/${SESSION_ID}?${params}`)
+      .then(r => r.json())
+      .then(data => {
+        filteredStudents = data.students;
+        document.getElementById('result-count').textContent = `${data.total} results`;
+        currentPage = 1;
+        renderTable();
+        renderPagination();
+      });
+  }
+
+  // ── Render Table ───────────────────────────────────────────────────────
+  function renderTable() {
+    const tbody = document.getElementById('students-tbody');
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    const page = filteredStudents.slice(start, end);
+
+    if (page.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted" style="padding:40px;">No students match the current filters.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = page.map(s => {
+      const label = s.predicted_label || 'Medium';
+      const badgeClass = `badge--${label.toLowerCase()}`;
+      const overrideTag = s.manual_override ? ' <span class="badge badge--override" style="font-size:10px;">Edited</span>' : '';
+      return `<tr>
+        <td class="t-caption-strong">${s.respondent_id || '-'}</td>
+        <td>${s.age || '-'}</td>
+        <td>${s.gender || '-'}</td>
+        <td>${s.field_of_study || '-'}</td>
+        <td>${s.gpa != null ? s.gpa : '-'}</td>
+        <td>${s.sleep_hours != null ? s.sleep_hours : '-'}</td>
+        <td>${s.academic_stress_level_1_10 != null ? s.academic_stress_level_1_10 : '-'}</td>
+        <td>${s.pre_exam_anxiety_level_1_10 != null ? s.pre_exam_anxiety_level_1_10 : '-'}</td>
+        <td>${s.class_attendance_percent != null ? s.class_attendance_percent + '%' : '-'}</td>
+        <td>${s.screen_time_hrs_per_day != null ? s.screen_time_hrs_per_day : '-'}</td>
+        <td>${s.fused_score != null ? s.fused_score.toFixed(3) : '-'}</td>
+        <td><span class="badge ${badgeClass}">${label}</span>${overrideTag}</td>
+        <td>
+          <div class="flex gap-xs">
+            <button class="btn btn-pearl btn-sm" onclick="viewStudent('${s.respondent_id}')" data-tooltip="View" style="padding:6px 10px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <button class="btn btn-pearl btn-sm" onclick="editStudent('${s.respondent_id}')" data-tooltip="Edit" style="padding:6px 10px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Pagination ─────────────────────────────────────────────────────────
+  function renderPagination() {
+    const container = document.getElementById('pagination');
+    const totalPages = Math.ceil(filteredStudents.length / PAGE_SIZE);
+    if (totalPages <= 1) { container.innerHTML = ''; return; }
+
+    let html = '';
+    html += `<button class="pagination__btn" onclick="goPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>&laquo;</button>`;
+
+    const maxVisible = 7;
+    let startP = Math.max(1, currentPage - 3);
+    let endP = Math.min(totalPages, startP + maxVisible - 1);
+    if (endP - startP < maxVisible - 1) startP = Math.max(1, endP - maxVisible + 1);
+
+    if (startP > 1) {
+      html += `<button class="pagination__btn" onclick="goPage(1)">1</button>`;
+      if (startP > 2) html += `<span class="pagination__info">...</span>`;
+    }
+
+    for (let p = startP; p <= endP; p++) {
+      html += `<button class="pagination__btn ${p === currentPage ? 'active' : ''}" onclick="goPage(${p})">${p}</button>`;
+    }
+
+    if (endP < totalPages) {
+      if (endP < totalPages - 1) html += `<span class="pagination__info">...</span>`;
+      html += `<button class="pagination__btn" onclick="goPage(${totalPages})">${totalPages}</button>`;
+    }
+
+    html += `<button class="pagination__btn" onclick="goPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>&raquo;</button>`;
+    html += `<span class="pagination__info">Page ${currentPage} of ${totalPages}</span>`;
+    container.innerHTML = html;
+  }
+
+  function goPage(p) {
+    const totalPages = Math.ceil(filteredStudents.length / PAGE_SIZE);
+    if (p < 1 || p > totalPages) return;
+    currentPage = p;
+    renderTable();
+    renderPagination();
+    document.querySelector('.data-table-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ── View Student Detail ────────────────────────────────────────────────
+  function viewStudent(rid) {
+    fetch(`/api/student/${SESSION_ID}/${rid}`)
+      .then(r => r.json())
+      .then(s => {
+        if (s.error) { showToast(s.error, 'error'); return; }
+        const label = s.predicted_label || 'Unknown';
+        const badgeClass = `badge--${label.toLowerCase()}`;
+
+        let plansHtml = '';
+        if (s.prescriptive_plans && s.prescriptive_plans.length > 0) {
+          plansHtml = `<div style="margin-top:var(--sp-lg);">
+            <div class="t-caption-strong" style="margin-bottom:var(--sp-sm);">Prescriptive Interventions</div>
+            ${s.prescriptive_plans.map(p => `
+              <div style="border-left: 3px solid ${p.color}; padding: 8px 14px; margin-bottom: 8px; background: var(--canvas-parchment); border-radius: var(--r-sm);">
+                <div class="t-caption-strong" style="color: ${p.color};">${p.category} &middot; ${p.status}</div>
+                <div class="t-caption" style="margin-top:2px;">${p.message}</div>
+              </div>
+            `).join('')}
+          </div>`;
+        }
+
+        let notesHtml = '';
+        if (s.notes) {
+          notesHtml = `<div style="margin-top:var(--sp-md);">
+            <div class="t-caption-strong" style="margin-bottom:4px;">Notes</div>
+            <div class="t-caption text-muted">${s.notes}</div>
+          </div>`;
+        }
+
+        document.getElementById('modal-title').textContent = `Student: ${s.respondent_id}`;
+        document.getElementById('modal-body').innerHTML = `
+          <div class="flex items-center gap-md mb-lg">
+            <span class="badge ${badgeClass}" style="font-size:14px;padding:6px 14px;">${label} Wellbeing</span>
+            ${s.manual_override ? '<span class="badge badge--override">Manually Edited</span>' : ''}
+            <span class="t-caption text-muted">Score: ${s.fused_score ? s.fused_score.toFixed(4) : '-'}</span>
+          </div>
+          
+          <div class="grid grid-3" style="gap:var(--sp-sm);">
+            <div class="detail-stat" style="border-bottom:none;flex-direction:column;align-items:flex-start;">
+              <span class="detail-stat__label">Age</span>
+              <span class="detail-stat__value">${s.age || '-'}</span>
+            </div>
+            <div class="detail-stat" style="border-bottom:none;flex-direction:column;align-items:flex-start;">
+              <span class="detail-stat__label">Gender</span>
+              <span class="detail-stat__value">${s.gender || '-'}</span>
+            </div>
+            <div class="detail-stat" style="border-bottom:none;flex-direction:column;align-items:flex-start;">
+              <span class="detail-stat__label">Field of Study</span>
+              <span class="detail-stat__value">${s.field_of_study || '-'}</span>
+            </div>
+          </div>
+
+          <div style="margin-top:var(--sp-lg); border-top:1px solid var(--divider-soft); padding-top:var(--sp-md);">
+            <div class="t-caption-strong" style="margin-bottom:var(--sp-sm);">Key Metrics</div>
+            <div class="detail-stat"><span class="detail-stat__label">GPA</span><span class="detail-stat__value">${s.gpa != null ? s.gpa : '-'}</span></div>
+            <div class="detail-stat"><span class="detail-stat__label">Sleep Hours</span><span class="detail-stat__value">${s.sleep_hours != null ? s.sleep_hours : '-'}</span></div>
+            <div class="detail-stat"><span class="detail-stat__label">Academic Stress</span><span class="detail-stat__value">${s.academic_stress_level_1_10 != null ? s.academic_stress_level_1_10 + '/10' : '-'}</span></div>
+            <div class="detail-stat"><span class="detail-stat__label">Pre-Exam Anxiety</span><span class="detail-stat__value">${s.pre_exam_anxiety_level_1_10 != null ? s.pre_exam_anxiety_level_1_10 + '/10' : '-'}</span></div>
+            <div class="detail-stat"><span class="detail-stat__label">Procrastination</span><span class="detail-stat__value">${s.procrastination_level_1_10 != null ? s.procrastination_level_1_10 + '/10' : '-'}</span></div>
+            <div class="detail-stat"><span class="detail-stat__label">Attendance</span><span class="detail-stat__value">${s.class_attendance_percent != null ? s.class_attendance_percent + '%' : '-'}</span></div>
+            <div class="detail-stat"><span class="detail-stat__label">Screen Time</span><span class="detail-stat__value">${s.screen_time_hrs_per_day != null ? s.screen_time_hrs_per_day + ' hrs' : '-'}</span></div>
+            <div class="detail-stat"><span class="detail-stat__label">Social Media</span><span class="detail-stat__value">${s.social_media_hrs_per_day != null ? s.social_media_hrs_per_day + ' hrs' : '-'}</span></div>
+            <div class="detail-stat"><span class="detail-stat__label">Bedtime Screen</span><span class="detail-stat__value">${s.screen_time_before_bed_minutes != null ? s.screen_time_before_bed_minutes + ' min' : '-'}</span></div>
+            <div class="detail-stat"><span class="detail-stat__label">Physical Activity</span><span class="detail-stat__value">${s.physical_activity_hrs_per_week != null ? s.physical_activity_hrs_per_week + ' hrs/wk' : '-'}</span></div>
+            <div class="detail-stat"><span class="detail-stat__label">Diet Quality</span><span class="detail-stat__value">${s.diet_quality_1_10 != null ? s.diet_quality_1_10 + '/10' : '-'}</span></div>
+            <div class="detail-stat"><span class="detail-stat__label">Caffeine Intake</span><span class="detail-stat__value">${s.caffeine_intake_mg_per_day != null ? s.caffeine_intake_mg_per_day + ' mg' : '-'}</span></div>
+          </div>
+
+          <div style="margin-top:var(--sp-lg); border-top:1px solid var(--divider-soft); padding-top:var(--sp-md);">
+            <div class="t-caption-strong" style="margin-bottom:var(--sp-sm);">Prediction Probabilities</div>
+            <div class="flex gap-lg">
+              <div>
+                <div class="t-fine-print text-muted">P(Low)</div>
+                <div class="t-caption-strong" style="color:var(--status-critical);">${s.prob_low != null ? (s.prob_low * 100).toFixed(1) + '%' : '-'}</div>
+              </div>
+              <div>
+                <div class="t-fine-print text-muted">P(Medium)</div>
+                <div class="t-caption-strong" style="color:var(--status-warning);">${s.prob_medium != null ? (s.prob_medium * 100).toFixed(1) + '%' : '-'}</div>
+              </div>
+              <div>
+                <div class="t-fine-print text-muted">P(High)</div>
+                <div class="t-caption-strong" style="color:var(--status-positive);">${s.prob_high != null ? (s.prob_high * 100).toFixed(1) + '%' : '-'}</div>
+              </div>
+            </div>
+          </div>
+
+          ${plansHtml}
+          ${notesHtml}
+        `;
+
+        document.getElementById('modal-save').style.display = 'none';
+        document.getElementById('student-modal').classList.add('active');
+      });
+  }
+
+  // ── Edit Student ───────────────────────────────────────────────────────
+  function editStudent(rid) {
+    fetch(`/api/student/${SESSION_ID}/${rid}`)
+      .then(r => r.json())
+      .then(s => {
+        if (s.error) { showToast(s.error, 'error'); return; }
+        editingStudent = s;
+        const label = s.predicted_label || 'Medium';
+
+        document.getElementById('modal-title').textContent = `Edit: ${s.respondent_id}`;
+        document.getElementById('modal-body').innerHTML = `
+          <div class="field">
+            <label class="field__label">Wellbeing Label (Manual Override)</label>
+            <select class="field__input" id="edit-label" style="border-radius:var(--r-sm);">
+              <option value="Low" ${label === 'Low' ? 'selected' : ''}>Low</option>
+              <option value="Medium" ${label === 'Medium' ? 'selected' : ''}>Medium</option>
+              <option value="High" ${label === 'High' ? 'selected' : ''}>High</option>
+            </select>
+            <div class="t-fine-print text-muted" style="margin-top:4px;">
+              AI predicted: ${label} (Score: ${s.fused_score ? s.fused_score.toFixed(4) : '-'})
+            </div>
+          </div>
+          <div class="field">
+            <label class="field__label">Notes</label>
+            <textarea class="field__input" id="edit-notes" placeholder="Add notes about this student...">${s.notes || ''}</textarea>
+          </div>
+        `;
+
+        document.getElementById('modal-save').style.display = 'inline-flex';
+        document.getElementById('student-modal').classList.add('active');
+      });
+  }
+
+  function saveStudent() {
+    if (!editingStudent) return;
+    const newLabel = document.getElementById('edit-label').value;
+    const newNotes = document.getElementById('edit-notes').value;
+
+    fetch(`/api/student/${SESSION_ID}/${editingStudent.respondent_id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ predicted_label: newLabel, notes: newNotes })
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          showToast(`Updated ${editingStudent.respondent_id} to ${newLabel}.`, 'success');
+          closeModal();
+          fetchStudents(); // Refresh
+        } else {
+          showToast(data.error || 'Failed to save.', 'error');
+        }
+      });
+  }
+
+  function closeModal() {
+    document.getElementById('student-modal').classList.remove('active');
+    editingStudent = null;
+  }
+
+  // Close modal on overlay click
+  document.getElementById('student-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  // ── Event Listeners ────────────────────────────────────────────────────
+  let searchTimeout;
+  document.getElementById('search-input').addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(fetchStudents, 300);
+  });
+  document.getElementById('filter-label').addEventListener('change', fetchStudents);
+
+  // ── Initial Load ───────────────────────────────────────────────────────
+  fetchStudents();
+</script>
+{% endblock %}

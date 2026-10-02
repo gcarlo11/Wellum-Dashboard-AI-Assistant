@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Upload Data{% endblock %}
+
+{% block content %}
+<!-- Hero Section (Dark Tile) -->
+<section class="tile-dark">
+  <div class="content-max text-center" style="padding: 64px 0;">
+    <h1 class="t-display-lg" style="color: var(--on-dark); margin-bottom: var(--sp-xs);">
+      Digital Academic Wellbeing Intelligence
+    </h1>
+    <p class="t-lead-airy" style="color: var(--body-muted); max-width: 600px; margin: 0 auto var(--sp-xl);">
+      Upload student survey data. The AI engine classifies wellbeing levels and generates comprehensive prescriptive insights.
+    </p>
+
+    {% if not model_ready %}
+    <div class="card" style="max-width: 500px; margin: 0 auto; border-left: 4px solid var(--status-critical); text-align: left;">
+      <div class="t-caption-strong" style="color: var(--status-critical);">Model Not Available</div>
+      <div class="t-caption text-muted mt-sm">
+        The inference model bundle was not found. Run <code>python train_and_save_model.py</code> first.
+      </div>
+    </div>
+    {% else %}
+    <!-- Upload Zone -->
+    <div class="upload-zone" id="upload-zone" style="max-width: 520px; margin: 0 auto;">
+      <div class="upload-zone__icon">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;color:var(--ink-muted-48);">
+          <path d="M14 30l10-10 10 10" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M24 20v22" stroke-linecap="round"/>
+          <path d="M40 30v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="upload-zone__title">Drop CSV file here</div>
+      <div class="upload-zone__desc">
+        Upload a CSV file with the same format as <code>test.csv</code>. The system will perform multi-class wellbeing classification on every student record.
+      </div>
+      <div style="margin-top: var(--sp-lg);">
+        <label class="btn btn-primary" for="csv-input" style="cursor: pointer;">
+          Choose File
+        </label>
+      </div>
+      <input type="file" id="csv-input" accept=".csv" style="display: none;" />
+      <div id="file-info" class="t-caption text-muted mt-md" style="display:none;"></div>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- How It Works (Light Tile) -->
+<section class="tile-light">
+  <div class="content-max">
+    <div class="section-header text-center mb-xl">
+      <h2 class="section-header__title">How It Works</h2>
+    </div>
+    <div class="grid grid-3" style="max-width: 900px; margin: 0 auto;">
+      <div class="card text-center" style="padding: var(--sp-xl);">
+        <div style="width:44px;height:44px;margin:0 auto var(--sp-md);background:var(--canvas-parchment);border-radius:var(--r-full);display:flex;align-items:center;justify-content:center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="t-body-strong">1. Upload CSV</div>
+        <div class="t-caption text-muted mt-sm">Upload a student survey dataset matching the competition schema with 25+ behavioral indicators.</div>
+      </div>
+      <div class="card text-center" style="padding: var(--sp-xl);">
+        <div style="width:44px;height:44px;margin:0 auto var(--sp-md);background:var(--canvas-parchment);border-radius:var(--r-full);display:flex;align-items:center;justify-content:center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <div class="t-body-strong">2. AI Inference</div>
+        <div class="t-caption text-muted mt-sm">150+ engineered features processed through a heterogeneous ensemble with PRDC-calibrated decision boundaries.</div>
+      </div>
+      <div class="card text-center" style="padding: var(--sp-xl);">
+        <div style="width:44px;height:44px;margin:0 auto var(--sp-md);background:var(--canvas-parchment);border-radius:var(--r-full);display:flex;align-items:center;justify-content:center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        </div>
+        <div class="t-body-strong">3. Dashboard</div>
+        <div class="t-caption text-muted mt-sm">View the complete wellbeing dashboard with aggregate analytics, individual student profiles, and prescriptive interventions.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Previous Sessions (Parchment Tile) -->
+{% if sessions %}
+<section class="tile-parchment">
+  <div class="content-max">
+    <div class="section-header mb-lg">
+      <h2 class="section-header__title">Previous Sessions</h2>
+      <div class="section-header__sub">View or manage your previous analysis sessions.</div>
+    </div>
+    <div class="flex flex-col gap-sm">
+      {% for s in sessions %}
+      <div class="session-card" id="session-{{ s.id }}">
+        <div class="session-card__info">
+          <div class="session-card__filename">{{ s.filename }}</div>
+          <div class="session-card__meta">{{ s.total }} students &middot; {{ s.created_at[:16] }}</div>
+        </div>
+        <div class="session-card__actions">
+          <a href="{{ url_for('dashboard', session_id=s.id) }}" class="btn btn-primary btn-sm">View Dashboard</a>
+          <a href="{{ url_for('students_list', session_id=s.id) }}" class="btn btn-secondary btn-sm">Student List</a>
+          <button class="btn btn-pearl btn-sm" onclick="deleteSession('{{ s.id }}')" data-tooltip="Delete">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const uploadZone = document.getElementById('upload-zone');
+  const csvInput = document.getElementById('csv-input');
+  const fileInfo = document.getElementById('file-info');
+
+  if (uploadZone) {
+    // Drag events
+    ['dragenter', 'dragover'].forEach(evt => {
+      uploadZone.addEventListener(evt, e => {
+        e.preventDefault();
+        uploadZone.classList.add('upload-zone--active');
+      });
+    });
+    ['dragleave', 'drop'].forEach(evt => {
+      uploadZone.addEventListener(evt, e => {
+        e.preventDefault();
+        uploadZone.classList.remove('upload-zone--active');
+      });
+    });
+    uploadZone.addEventListener('drop', e => {
+      const file = e.dataTransfer.files[0];
+      if (file) processFile(file);
+    });
+
+    csvInput.addEventListener('change', () => {
+      if (csvInput.files[0]) processFile(csvInput.files[0]);
+    });
+  }
+
+  function processFile(file) {
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      showToast('Please select a valid CSV file (.csv).', 'error');
+      return;
+    }
+    fileInfo.style.display = 'block';
+    fileInfo.textContent = `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+
+    showLoading('Running Inference', 'Processing 150+ features through ensemble model...');
+
+    const formData = new FormData();
+    formData.append('csv_file', file);
+
+    fetch('{{ url_for("upload") }}', { method: 'POST', body: formData })
+      .then(async r => {
+        let data;
+        try {
+          data = await r.json();
+        } catch (jsonErr) {
+          throw new Error(`Server returned HTTP ${r.status}`);
+        }
+        if (!r.ok || data.error) {
+          throw new Error(data.error || `Upload failed (HTTP ${r.status})`);
+        }
+        return data;
+      })
+      .then(data => {
+        hideLoading();
+        showToast(`Classified ${data.total} students successfully.`, 'success');
+        setTimeout(() => {
+          window.location.href = `/dashboard/${data.session_id}`;
+        }, 600);
+      })
+      .catch(err => {
+        hideLoading();
+        showToast(err.message || 'Upload failed. Check the file format.', 'error');
+      });
+  }
+
+  function deleteSession(sid) {
+    if (!confirm('Delete this session? This action cannot be undone.')) return;
+    fetch(`/api/session/${sid}/delete`, { method: 'DELETE' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById(`session-${sid}`).remove();
+          showToast('Session deleted.', 'info');
+        }
+      });
+  }
+</script>
+{% endblock %}

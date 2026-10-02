@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block nav_links %}
+<li><a href="{{ url_for('dashboard', session_id=session.session_id) }}" class="active">Dashboard</a></li>
+<li><a href="{{ url_for('students_list', session_id=session.session_id) }}">Students</a></li>
+{% endblock %}
+
+{% block subnav %}
+<div class="sub-nav">
+  <div class="sub-nav__title">Academic Wellbeing Dashboard</div>
+  <div class="sub-nav__actions">
+    <span class="t-caption text-muted">{{ session.filename }} &middot; {{ analytics.total_students }} students</span>
+    <a href="{{ url_for('students_list', session_id=session.session_id) }}" class="btn btn-primary btn-sm">View All Students</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-content">
+
+  <!-- ── KPI Cards ──────────────────────────────────────────────────────── -->
+  <section class="mb-xl">
+    <div class="grid grid-4">
+      <div class="kpi-card">
+        <div class="kpi-card__label">Wellbeing Index</div>
+        <div class="kpi-card__value" style="color: {% if analytics.wellbeing_index >= 65 %}var(--status-positive){% elif analytics.wellbeing_index >= 45 %}var(--status-warning){% else %}var(--status-critical){% endif %};">
+          {{ analytics.wellbeing_index }}<span class="kpi-card__unit">/ 100</span>
+        </div>
+        <div class="kpi-card__change {% if analytics.wellbeing_index >= 60 %}kpi-card__change--positive{% else %}kpi-card__change--warning{% endif %}">
+          Composite Score
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Total Students</div>
+        <div class="kpi-card__value">{{ analytics.total_students }}</div>
+        <div class="kpi-card__change" style="color: var(--ink-muted-48);">Respondents classified</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">At-Risk (Low Wellbeing)</div>
+        <div class="kpi-card__value" style="color: var(--status-critical);">{{ analytics.low_pct }}%</div>
+        <div class="kpi-card__change kpi-card__change--critical">{{ analytics.low_count }} students need intervention</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Optimal (High Wellbeing)</div>
+        <div class="kpi-card__value" style="color: var(--status-positive);">{{ analytics.high_pct }}%</div>
+        <div class="kpi-card__change kpi-card__change--positive">{{ analytics.high_count }} students thriving</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Distribution & Charts Row ─────────────────────────────────────── -->
+  <section class="mb-xl">
+    <div class="grid grid-2">
+      <!-- Donut Chart: Label Distribution -->
+      <div class="chart-card">
+        <div class="chart-card__header">
+          <div>
+            <div class="chart-card__title">Wellbeing Distribution</div>
+            <div class="chart-card__subtitle">Classification outcome breakdown</div>
+          </div>
+        </div>
+        <div class="chart-card__body">
+          <div class="donut-container">
+            <div class="donut" id="donut-chart"></div>
+            <div class="donut-legend">
+              <div class="donut-legend__item">
+                <span class="donut-legend__color" style="background: var(--status-critical);"></span>
+                <span class="donut-legend__label">Low</span>
+                <span class="donut-legend__value">{{ analytics.low_count }} ({{ analytics.low_pct }}%)</span>
+              </div>
+              <div class="donut-legend__item">
+                <span class="donut-legend__color" style="background: var(--status-warning);"></span>
+                <span class="donut-legend__label">Medium</span>
+                <span class="donut-legend__value">{{ analytics.medium_count }} ({{ analytics.medium_pct }}%)</span>
+              </div>
+              <div class="donut-legend__item">
+                <span class="donut-legend__color" style="background: var(--status-positive);"></span>
+                <span class="donut-legend__label">High</span>
+                <span class="donut-legend__value">{{ analytics.high_count }} ({{ analytics.high_pct }}%)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Behavioral Averages -->
+      <div class="chart-card">
+        <div class="chart-card__header">
+          <div>
+            <div class="chart-card__title">Behavioral Indicators</div>
+            <div class="chart-card__subtitle">Population averages across key dimensions</div>
+          </div>
+        </div>
+        <div class="chart-card__body" style="display:flex;flex-direction:column;gap:var(--sp-md);">
+          <!-- Sleep -->
+          <div>
+            <div class="flex justify-between items-center mb-sm" style="margin-bottom:4px;">
+              <span class="t-caption">Average Sleep</span>
+              <span class="t-caption-strong">{{ analytics.avg_sleep }} hrs</span>
+            </div>
+            <div class="score-bar">
+              <div class="score-bar__track">
+                <div class="score-bar__fill" style="width: {{ (analytics.avg_sleep / 10 * 100)|round }}%; background: {% if analytics.avg_sleep >= 7 %}var(--status-positive){% elif analytics.avg_sleep >= 6 %}var(--status-warning){% else %}var(--status-critical){% endif %};"></div>
+              </div>
+            </div>
+          </div>
+          <!-- GPA -->
+          <div>
+            <div class="flex justify-between items-center" style="margin-bottom:4px;">
+              <span class="t-caption">Average GPA</span>
+              <span class="t-caption-strong">{{ analytics.avg_gpa }}</span>
+            </div>
+            <div class="score-bar">
+              <div class="score-bar__track">
+                <div class="score-bar__fill" style="width: {{ (analytics.avg_gpa / 4 * 100)|round }}%; background: var(--primary);"></div>
+              </div>
+            </div>
+          </div>
+          <!-- Stress -->
+          <div>
+            <div class="flex justify-between items-center" style="margin-bottom:4px;">
+              <span class="t-caption">Average Stress Level</span>
+              <span class="t-caption-strong">{{ analytics.avg_stress }} / 10</span>
+            </div>
+            <div class="score-bar">
+              <div class="score-bar__track">
+                <div class="score-bar__fill" style="width: {{ (analytics.avg_stress / 10 * 100)|round }}%; background: {% if analytics.avg_stress <= 5 %}var(--status-positive){% elif analytics.avg_stress <= 7 %}var(--status-warning){% else %}var(--status-critical){% endif %};"></div>
+              </div>
+            </div>
+          </div>
+          <!-- Attendance -->
+          <div>
+            <div class="flex justify-between items-center" style="margin-bottom:4px;">
+              <span class="t-caption">Average Attendance</span>
+              <span class="t-caption-strong">{{ analytics.avg_attendance }}%</span>
+            </div>
+            <div class="score-bar">
+              <div class="score-bar__track">
+                <div class="score-bar__fill" style="width: {{ analytics.avg_attendance|round }}%; background: {% if analytics.avg_attendance >= 80 %}var(--status-positive){% elif analytics.avg_attendance >= 70 %}var(--status-warning){% else %}var(--status-critical){% endif %};"></div>
+              </div>
+            </div>
+          </div>
+          <!-- Screen Time -->
+          <div>
+            <div class="flex justify-between items-center" style="margin-bottom:4px;">
+              <span class="t-caption">Average Screen Time</span>
+              <span class="t-caption-strong">{{ analytics.avg_screen_time }} hrs/day</span>
+            </div>
+            <div class="score-bar">
+              <div class="score-bar__track">
+                <div class="score-bar__fill" style="width: {{ (analytics.avg_screen_time / 16 * 100)|round }}%; background: {% if analytics.avg_screen_time <= 6 %}var(--status-positive){% elif analytics.avg_screen_time <= 9 %}var(--status-warning){% else %}var(--status-critical){% endif %};"></div>
+              </div>
+            </div>
+          </div>
+          <!-- Procrastination -->
+          <div>
+            <div class="flex justify-between items-center" style="margin-bottom:4px;">
+              <span class="t-caption">Average Procrastination</span>
+              <span class="t-caption-strong">{{ analytics.avg_procrastination }} / 10</span>
+            </div>
+            <div class="score-bar">
+              <div class="score-bar__track">
+                <div class="score-bar__fill" style="width: {{ (analytics.avg_procrastination / 10 * 100)|round }}%; background: {% if analytics.avg_procrastination <= 4 %}var(--status-positive){% elif analytics.avg_procrastination <= 6 %}var(--status-warning){% else %}var(--status-critical){% endif %};"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Field of Study Breakdown ──────────────────────────────────────── -->
+  <section class="mb-xl">
+    <div class="chart-card">
+      <div class="chart-card__header">
+        <div>
+          <div class="chart-card__title">Wellbeing by Field of Study</div>
+          <div class="chart-card__subtitle">Distribution of classification labels across academic programs</div>
+        </div>
+      </div>
+      <div class="chart-card__body">
+        <canvas id="field-chart" height="280"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Risk Indicators ───────────────────────────────────────────────── -->
+  <section class="mb-xl">
+    <div class="section-header mb-lg">
+      <h2 class="section-header__title">Risk Indicators</h2>
+      <div class="section-header__sub">Proportion of students exceeding critical thresholds</div>
+    </div>
+    <div class="grid grid-4">
+      <div class="kpi-card">
+        <div class="kpi-card__label">Sleep Deficit (&lt; 7 hrs)</div>
+        <div class="kpi-card__value" style="color: {% if analytics.pct_sleep_deficit > 40 %}var(--status-critical){% elif analytics.pct_sleep_deficit > 20 %}var(--status-warning){% else %}var(--status-positive){% endif %};">{{ analytics.pct_sleep_deficit }}%</div>
+        <div class="h-bar mt-sm">
+          <div class="h-bar__segment" style="width:{{ analytics.pct_sleep_deficit }}%; background: var(--status-critical);"></div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">High Stress (&gt; 7/10)</div>
+        <div class="kpi-card__value" style="color: {% if analytics.pct_high_stress > 30 %}var(--status-critical){% elif analytics.pct_high_stress > 15 %}var(--status-warning){% else %}var(--status-positive){% endif %};">{{ analytics.pct_high_stress }}%</div>
+        <div class="h-bar mt-sm">
+          <div class="h-bar__segment" style="width:{{ analytics.pct_high_stress }}%; background: var(--status-warning);"></div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Excessive Screen (&gt; 8 hrs)</div>
+        <div class="kpi-card__value" style="color: {% if analytics.pct_high_screen > 40 %}var(--status-critical){% elif analytics.pct_high_screen > 20 %}var(--status-warning){% else %}var(--status-positive){% endif %};">{{ analytics.pct_high_screen }}%</div>
+        <div class="h-bar mt-sm">
+          <div class="h-bar__segment" style="width:{{ analytics.pct_high_screen }}%; background: var(--status-warning);"></div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Low Attendance (&lt; 75%)</div>
+        <div class="kpi-card__value" style="color: {% if analytics.pct_low_attendance > 25 %}var(--status-critical){% elif analytics.pct_low_attendance > 15 %}var(--status-warning){% else %}var(--status-positive){% endif %};">{{ analytics.pct_low_attendance }}%</div>
+        <div class="h-bar mt-sm">
+          <div class="h-bar__segment" style="width:{{ analytics.pct_low_attendance }}%; background: var(--status-critical);"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Score Distribution Chart ──────────────────────────────────────── -->
+  <section class="mb-xl">
+    <div class="chart-card">
+      <div class="chart-card__header">
+        <div>
+          <div class="chart-card__title">Fused Score Distribution</div>
+          <div class="chart-card__subtitle">Continuous prediction scores with PRDC calibrated decision boundaries at t1={{ analytics.cutoffs[0] }} and t2={{ analytics.cutoffs[1] }}</div>
+        </div>
+      </div>
+      <div class="chart-card__body">
+        <canvas id="score-chart" height="200"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Insights & Recommendations ────────────────────────────────────── -->
+  <section class="mb-xl">
+    <div class="section-header mb-lg">
+      <h2 class="section-header__title">Key Insights & Recommendations</h2>
+      <div class="section-header__sub">AI-generated analysis based on aggregate student behavioral patterns</div>
+    </div>
+    <div class="grid grid-2">
+      {% for insight in insights %}
+      <div class="insight-card insight-card--{{ insight.severity }}">
+        <div class="insight-card__severity" style="color: {% if insight.severity == 'critical' %}var(--status-critical){% elif insight.severity == 'warning' %}var(--status-warning){% elif insight.severity == 'positive' %}var(--status-positive){% else %}var(--primary){% endif %};">
+          {{ insight.severity|upper }}
+        </div>
+        <div class="insight-card__category">{{ insight.category }}</div>
+        <div class="insight-card__title">{{ insight.title }}</div>
+        <div class="insight-card__desc">{{ insight.description }}</div>
+        <div class="insight-card__rec">
+          <div class="insight-card__rec-label">Recommendation</div>
+          {{ insight.recommendation }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- ── Additional Metrics ────────────────────────────────────────────── -->
+  <section class="mb-xl">
+    <div class="section-header mb-lg">
+      <h2 class="section-header__title">Detailed Metrics</h2>
+      <div class="section-header__sub">Extended behavioral and physiological indicators</div>
+    </div>
+    <div class="grid grid-3">
+      <div class="card">
+        <div class="t-caption-strong text-muted" style="text-transform:uppercase;letter-spacing:0.3px;margin-bottom:var(--sp-sm);">Digital Habits</div>
+        <div class="detail-stat">
+          <span class="detail-stat__label">Avg Social Media</span>
+          <span class="detail-stat__value">{{ analytics.avg_social_media }} hrs/day</span>
+        </div>
+        <div class="detail-stat">
+          <span class="detail-stat__label">Avg Bedtime Screen</span>
+          <span class="detail-stat__value">{{ analytics.avg_bed_screen }} min</span>
+        </div>
+        <div class="detail-stat">
+          <span class="detail-stat__label">Avg Total Screen</span>
+          <span class="detail-stat__value">{{ analytics.avg_screen_time }} hrs/day</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="t-caption-strong text-muted" style="text-transform:uppercase;letter-spacing:0.3px;margin-bottom:var(--sp-sm);">Physical Health</div>
+        <div class="detail-stat">
+          <span class="detail-stat__label">Avg Physical Activity</span>
+          <span class="detail-stat__value">{{ analytics.avg_physical_activity }} hrs/week</span>
+        </div>
+        <div class="detail-stat">
+          <span class="detail-stat__label">Avg Diet Quality</span>
+          <span class="detail-stat__value">{{ analytics.avg_diet_quality }} / 10</span>
+        </div>
+        <div class="detail-stat">
+          <span class="detail-stat__label">Avg Sleep Duration</span>
+          <span class="detail-stat__value">{{ analytics.avg_sleep }} hrs</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="t-caption-strong text-muted" style="text-transform:uppercase;letter-spacing:0.3px;margin-bottom:var(--sp-sm);">Academic Performance</div>
+        <div class="detail-stat">
+          <span class="detail-stat__label">Avg GPA</span>
+          <span class="detail-stat__value">{{ analytics.avg_gpa }}</span>
+        </div>
+        <div class="detail-stat">
+          <span class="detail-stat__label">Avg Attendance</span>
+          <span class="detail-stat__value">{{ analytics.avg_attendance }}%</span>
+        </div>
+        <div class="detail-stat">
+          <span class="detail-stat__label">Avg Anxiety Level</span>
+          <span class="detail-stat__value">{{ analytics.avg_anxiety }} / 10</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Quick Student Preview ─────────────────────────────────────────── -->
+  <section class="mb-xl">
+    <div class="data-table-container">
+      <div class="data-table-header">
+        <div class="data-table-header__title">Student Preview (First 20)</div>
+        <a href="{{ url_for('students_list', session_id=session.session_id) }}" class="text-link t-caption-strong">View All Students &rarr;</a>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Gender</th>
+              <th>Field</th>
+              <th>GPA</th>
+              <th>Sleep</th>
+              <th>Stress</th>
+              <th>Attendance</th>
+              <th>Score</th>
+              <th>Label</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in session.students[:20] %}
+            <tr>
+              <td class="t-caption-strong">{{ s.respondent_id }}</td>
+              <td>{{ s.gender or '-' }}</td>
+              <td>{{ s.field_of_study or '-' }}</td>
+              <td>{{ s.gpa or '-' }}</td>
+              <td>{{ s.sleep_hours or '-' }}</td>
+              <td>{{ s.academic_stress_level_1_10 or '-' }}</td>
+              <td>{{ s.class_attendance_percent or '-' }}%</td>
+              <td>{{ '%.3f'|format(s.fused_score) }}</td>
+              <td>
+                <span class="badge badge--{{ s.predicted_label|lower }}">{{ s.predicted_label }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+  const analyticsData = {{ analytics_json|safe }};
+
+  // ── Donut Chart (CSS-based Conic Gradient) ─────────────────────────────
+  (function() {
+    const donut = document.getElementById('donut-chart');
+    if (!donut) return;
+    const low = analyticsData.low_pct;
+    const med = analyticsData.medium_pct;
+    const high = analyticsData.high_pct;
+    const lowEnd = low;
+    const medEnd = low + med;
+    donut.style.background = `conic-gradient(
+      #E11D48 0% ${lowEnd}%,
+      #F59E0B ${lowEnd}% ${medEnd}%,
+      #059669 ${medEnd}% 100%
+    )`;
+    donut.innerHTML = `<div class="donut__center">
+      <div class="donut__center-value">${analyticsData.total_students}</div>
+      <div class="donut__center-label">Total</div>
+    </div>`;
+  })();
+
+  // ── Field of Study Stacked Bar Chart ───────────────────────────────────
+  (function() {
+    const ctx = document.getElementById('field-chart');
+    if (!ctx) return;
+    const fieldData = analyticsData.field_distribution;
+    const labels = Object.keys(fieldData).sort((a,b) => fieldData[b].total - fieldData[a].total);
+    
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Low',
+            data: labels.map(l => fieldData[l].Low),
+            backgroundColor: '#E11D48',
+            borderRadius: 2,
+          },
+          {
+            label: 'Medium',
+            data: labels.map(l => fieldData[l].Medium),
+            backgroundColor: '#F59E0B',
+            borderRadius: 2,
+          },
+          {
+            label: 'High',
+            data: labels.map(l => fieldData[l].High),
+            backgroundColor: '#059669',
+            borderRadius: 2,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              usePointStyle: true,
+              pointStyle: 'rectRounded',
+              padding: 20,
+              font: { family: 'Inter, system-ui', size: 12, weight: 500 }
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            grid: { display: false },
+            ticks: { font: { family: 'Inter, system-ui', size: 11 } }
+          },
+          y: {
+            stacked: true,
+            grid: { color: '#f0f0f0' },
+            ticks: { font: { family: 'Inter, system-ui', size: 11 } }
+          }
+        }
+      }
+    });
+  })();
+
+  // ── Score Distribution Histogram ───────────────────────────────────────
+  (function() {
+    const ctx = document.getElementById('score-chart');
+    if (!ctx) return;
+    const scores = analyticsData.score_values || [];
+    const t1 = analyticsData.cutoffs[0];
+    const t2 = analyticsData.cutoffs[1];
+
+    // Build histogram bins
+    const numBins = 30;
+    const minS = Math.min(...scores, 0);
+    const maxS = Math.max(...scores, 2.5);
+    const binWidth = (maxS - minS) / numBins;
+    const bins = new Array(numBins).fill(0);
+    const binLabels = [];
+    
+    for (let i = 0; i < numBins; i++) {
+      const start = minS + i * binWidth;
+      binLabels.push(start.toFixed(2));
+    }
+    
+    scores.forEach(s => {
+      const idx = Math.min(Math.floor((s - minS) / binWidth), numBins - 1);
+      if (idx >= 0) bins[idx]++;
+    });
+
+    // Color each bin based on cutoffs
+    const colors = binLabels.map(l => {
+      const v = parseFloat(l);
+      if (v < t1) return '#E11D48';
+      if (v < t2) return '#F59E0B';
+      return '#059669';
+    });
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: binLabels,
+        datasets: [{
+          data: bins,
+          backgroundColor: colors,
+          borderRadius: 1,
+          barPercentage: 1.0,
+          categoryPercentage: 1.0,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: (items) => `Score: ${items[0].label}`,
+              label: (item) => `${item.raw} students`
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              maxTicksLimit: 10,
+              font: { family: 'Inter, system-ui', size: 10 }
+            },
+            title: {
+              display: true,
+              text: 'Fused Score',
+              font: { family: 'Inter, system-ui', size: 12, weight: 600 }
+            }
+          },
+          y: {
+            grid: { color: '#f0f0f0' },
+            ticks: { font: { family: 'Inter, system-ui', size: 11 } },
+            title: {
+              display: true,
+              text: 'Count',
+              font: { family: 'Inter, system-ui', size: 12, weight: 600 }
+            }
+          }
+        }
+      }
+    });
+  })();
+</script>
+{% endblock %}

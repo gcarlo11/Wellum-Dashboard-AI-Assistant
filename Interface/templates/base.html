@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Wellum{% endblock %} — Academic Wellbeing Intelligence</title>
+  <meta name="description" content="Wellum: Dashboard AI Assistant Pemantauan Tingkat Kesejahteraan Akademik Digital Mahasiswa sebagai Basis Intervensi Institusional Berbasis Data. TECHPHORIA 2026.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+  <!-- Global Navigation -->
+  <nav class="global-nav" id="global-nav">
+    <a href="{{ url_for('index') }}" class="global-nav__brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      Wellum
+    </a>
+    <ul class="global-nav__links">
+      <li><a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Upload</a></li>
+      {% block nav_links %}{% endblock %}
+      <li><a href="https://techphoria.unsri.ac.id" target="_blank" rel="noopener">TECHPHORIA 2026</a></li>
+    </ul>
+  </nav>
+
+  {% block subnav %}{% endblock %}
+
+  <!-- Main Content -->
+  <main id="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <div class="site-footer__brand">Wellum AI Engine v1.0</div>
+      <div class="site-footer__sub">
+        TECHPHORIA 2026 Data Mining Competition &middot; Universitas Sriwijaya
+        &middot; Ignite Innovation, Build the Future
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-overlay__text" id="loading-text">Processing</div>
+    <div class="loading-overlay__sub" id="loading-sub">Running inference engine...</div>
+  </div>
+
+  <script>
+    // ── Toast System ──────────────────────────────────────────────────────
+    function showToast(message, type = 'info', duration = 4000) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast--${type}`;
+      toast.innerHTML = `
+        <span class="toast__message">${message}</span>
+        <button class="toast__close" onclick="this.parentElement.remove()">&times;</button>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), duration);
+    }
+
+    // ── Loading Overlay ───────────────────────────────────────────────────
+    function showLoading(text, sub) {
+      const overlay = document.getElementById('loading-overlay');
+      document.getElementById('loading-text').textContent = text || 'Processing';
+      document.getElementById('loading-sub').textContent = sub || 'Please wait...';
+      overlay.classList.add('active');
+    }
+    function hideLoading() {
+      document.getElementById('loading-overlay').classList.remove('active');
+    }
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>
